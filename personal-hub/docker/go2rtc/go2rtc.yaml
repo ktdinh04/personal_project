@@ -1,0 +1,53 @@
+# go2rtc Configuration
+# Documentation: https://github.com/AlexxIT/go2rtc
+
+# API Settings
+api:
+  listen: ":1984"
+  base_path: ""
+  origin: "*"
+
+# RTSP Server Settings
+rtsp:
+  listen: ":8554"
+  default_query: "video&audio"
+
+# WebRTC Settings
+webrtc:
+  listen: ":8555"
+  candidates:
+    - stun:stun.l.google.com:19302
+
+# HTTP/HLS Settings
+http:
+  listen: ":8888"
+
+# Stream Sources
+# Add your camera streams here
+streams:
+  # Main camera - configure via environment or edit directly
+  main_camera:
+    - "${CAMERA_URL:rtsp://admin:password@192.168.1.100:554/stream1}"
+
+  # Example: USB camera (uncomment to enable)
+  # usb_camera:
+  #   - "ffmpeg:device?video=/dev/video0&input_format=mjpeg&video_size=1920x1080"
+
+  # Example: Multiple cameras
+  # camera_1:
+  #   - "rtsp://user:pass@192.168.1.101:554/stream1"
+  # camera_2:
+  #   - "rtsp://user:pass@192.168.1.102:554/stream1"
+
+  # DeepStream output (if using deepstream service)
+  deepstream_output:
+    - "rtsp://deepstream:8554/ds-output"
+
+# FFmpeg Settings (for transcoding if needed)
+ffmpeg:
+  bin: "ffmpeg"
+
+# Logging
+log:
+  level: "info"  # trace, debug, info, warn, error
+  output: "stdout"

@@ -1,0 +1,332 @@
+# =============================================================================
+# Personal Hub - Docker Compose Configuration
+# =============================================================================
+# Usage:
+#   Development:  docker compose up -d
+#   Production:   docker compose --profile production up -d
+#   With GPU:     docker compose --profile gpu up -d
+#   Full GPU:     docker compose --profile gpu --profile deepstream up -d
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Core Services
+  # ===========================================================================
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: personalhub-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${APP_ENV:-development}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+      - ./config:/app/config:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - personalhub-network
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: personalhub-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=mysql+asyncmy://${MYSQL_USER:-personalhub}:${MYSQL_PASSWORD:-password}@mysql:3306/${MYSQL_DATABASE:-personalhub}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change_this_secret}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_SECONDS=${ACCESS_TOKEN_EXPIRE_SECONDS:-900}
+      - REFRESH_TOKEN_EXPIRE_SECONDS=${REFRESH_TOKEN_EXPIRE_SECONDS:-604800}
+      - INIT_ADMIN_EMAIL=${INIT_ADMIN_EMAIL:-admin@personalhub.local}
+      - INIT_ADMIN_PASSWORD=${INIT_ADMIN_PASSWORD:-ChangeThisPassword123!}
+      - INIT_ADMIN_NAME=${INIT_ADMIN_NAME:-Administrator}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - GO2RTC_HOST=go2rtc
+      - GO2RTC_API_PORT=1984
+      - PERSON_DETECTION_HOST=person-detection
+      - PERSON_DETECTION_PORT=8001
+      - MODULES_DIR=/app/modules
+    volumes:
+      - ./backend:/app
+      - ./modules:/app/modules:ro
+      - ./config:/app/config:ro
+      - backend-logs:/var/log/personalhub
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - personalhub-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: personalhub-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-personalhub}
+      - MYSQL_USER=${MYSQL_USER:-personalhub}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - personalhub-network
+
+  # Redis (Cache & Rate Limiting)
+  redis:
+    image: redis:7-alpine
+    container_name: personalhub-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - personalhub-network
+
+  # ===========================================================================
+  # Media Services
+  # ===========================================================================
+
+  # go2rtc - Media Relay (RTSP to WebRTC/HLS)
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: personalhub-go2rtc
+    restart: unless-stopped
+    ports:
+      - "1984:1984"   # API
+      - "8554:8554"   # RTSP
+      - "8555:8555"   # WebRTC
+      - "8888:8888"   # HLS/HTTP
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    volumes:
+      - ./docker/go2rtc/go2rtc.yaml:/config/go2rtc.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:1984/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - personalhub-network
+
+  # ===========================================================================
+  # AI/ML Services
+  # ===========================================================================
+
+  # Person Detection (CPU Version - default)
+  person-detection:
+    build:
+      context: ./docker/person-detection
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: personalhub-person-detection
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - YOLO_MODEL=${YOLO_MODEL:-yolov8n.pt}
+      - DETECTION_CONFIDENCE=${DETECTION_CONFIDENCE:-0.5}
+      - DETECTION_IOU_THRESHOLD=${DETECTION_IOU_THRESHOLD:-0.45}
+      - USE_GPU=false
+      - WORKERS=2
+    volumes:
+      - ./docker/person-detection/models:/app/models
+      - detection-cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - personalhub-network
+    profiles:
+      - default
+      - cpu
+
+  # Person Detection (GPU Version)
+  person-detection-gpu:
+    build:
+      context: ./docker/person-detection
+      dockerfile: Dockerfile
+      target: gpu
+    container_name: personalhub-person-detection-gpu
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - YOLO_MODEL=${YOLO_MODEL:-yolov8n.pt}
+      - DETECTION_CONFIDENCE=${DETECTION_CONFIDENCE:-0.5}
+      - DETECTION_IOU_THRESHOLD=${DETECTION_IOU_THRESHOLD:-0.45}
+      - USE_GPU=true
+      - WORKERS=1
+    volumes:
+      - ./docker/person-detection/models:/app/models
+      - detection-cache:/app/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - personalhub-network
+    profiles:
+      - gpu
+
+  # ===========================================================================
+  # DeepStream Service (GPU Only)
+  # ===========================================================================
+
+  deepstream:
+    build:
+      context: ./docker/deepstream
+      dockerfile: Dockerfile
+    container_name: personalhub-deepstream
+    restart: unless-stopped
+    ports:
+      - "8554:8554"   # RTSP output
+      - "5000:5000"   # Metadata API
+    environment:
+      - CAMERA_URL=${DEFAULT_CAMERA_URL:-rtsp://admin:password@192.168.1.100:554/stream1}
+      - CAMERA_NAME=${CAMERA_NAME:-main_camera}
+      - OUTPUT_RTSP_PORT=8554
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+    volumes:
+      - ./docker/deepstream/configs:/app/configs:ro
+      - ./docker/deepstream/models:/app/models
+      - deepstream-logs:/app/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video, compute]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - personalhub-network
+    profiles:
+      - deepstream
+      - gpu-full
+
+  # ===========================================================================
+  # Production Services
+  # ===========================================================================
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: personalhub-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - personalhub-network
+    profiles:
+      - production
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  personalhub-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  backend-logs:
+    driver: local
+  detection-cache:
+    driver: local
+  deepstream-logs:
+    driver: local
+  nginx-logs:
+    driver: local

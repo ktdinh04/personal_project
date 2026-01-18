@@ -1,0 +1,85 @@
+# Personal Hub - Profile Configuration
+# This file configures the landing page and branding
+
+profile:
+  displayName: "Your Name"
+  tagline: "Senior Full-Stack & MLOps Engineer"
+  bio: |
+    Passionate about building scalable systems, AI/ML solutions, and creating
+    innovative products. Specialized in computer vision, deep learning, and
+    cloud-native architectures.
+  avatarUrl: "/images/avatar.jpg"
+  location: "Vietnam"
+  email: "your.email@example.com"
+
+# Theme Configuration
+theme:
+  accentColor: "#6366f1"  # Indigo
+  primaryGradient: "from-indigo-500 via-purple-500 to-pink-500"
+  secondaryGradient: "from-cyan-400 to-blue-500"
+  darkMode: true
+
+# Social Links (displayed on landing page)
+socialLinks:
+  github: "https://github.com/yourusername"
+  linkedin: "https://linkedin.com/in/yourusername"
+  twitter: "https://twitter.com/yourusername"
+  website: "https://yourwebsite.com"
+
+# Skills (displayed on landing page)
+skills:
+  - category: "Languages"
+    items:
+      - name: "Python"
+        level: 95
+      - name: "TypeScript"
+        level: 90
+      - name: "Go"
+        level: 75
+      - name: "Rust"
+        level: 60
+
+  - category: "AI/ML"
+    items:
+      - name: "PyTorch"
+        level: 90
+      - name: "TensorFlow"
+        level: 85
+      - name: "NVIDIA DeepStream"
+        level: 80
+      - name: "Computer Vision"
+        level: 85
+
+  - category: "DevOps & Cloud"
+    items:
+      - name: "Docker/Kubernetes"
+        level: 90
+      - name: "AWS/GCP"
+        level: 85
+      - name: "CI/CD"
+        level: 88
+      - name: "MLOps"
+        level: 85
+
+# Featured Projects (shown on landing - separate from module demos)
+featuredProjects:
+  - name: "Real-time Video Analytics"
+    description: "GPU-accelerated video analytics using NVIDIA DeepStream"
+    tags: ["DeepStream", "CUDA", "Python"]
+    link: "/modules/deepstream-camera-stream"
+
+  - name: "Person Detection API"
+    description: "High-performance person detection using YOLO"
+    tags: ["YOLO", "FastAPI", "PyTorch"]
+    link: "/modules/person-detection"
+
+# Contact Form Settings
+contact:
+  enabled: true
+  recipientEmail: "your.email@example.com"
+
+# SEO Settings
+seo:
+  title: "Personal Hub | Your Name"
+  description: "Personal portfolio and project demo hub"
+  keywords: ["developer", "ai", "ml", "portfolio"]

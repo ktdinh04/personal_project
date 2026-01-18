@@ -1,0 +1,52 @@
+{
+  "id": "person-detection",
+  "name": "Person Detection",
+  "description": "AI-powered person detection using YOLO models. Supports image upload and real-time stream analysis with GPU acceleration.",
+  "version": "1.0.0",
+  "tags": ["ai", "yolo", "detection", "computer-vision", "pytorch", "gpu"],
+  "ui": {
+    "path": "/modules/person-detection",
+    "icon": "Users",
+    "nav_order": 20
+  },
+  "api": {
+    "base_path": "/api/modules/detection",
+    "health_path": "/health"
+  },
+  "permissions_required": ["user"],
+  "services": {
+    "main": "person-detection"
+  },
+  "config_schema": {
+    "model": {
+      "type": "string",
+      "default": "yolov8n.pt",
+      "required": true,
+      "description": "YOLO model to use (yolov8n, yolov8s, yolov8m, yolov8l, yolov8x)"
+    },
+    "confidence_threshold": {
+      "type": "number",
+      "default": "0.5",
+      "required": false,
+      "description": "Minimum confidence threshold for detections (0.0-1.0)"
+    },
+    "iou_threshold": {
+      "type": "number",
+      "default": "0.45",
+      "required": false,
+      "description": "IoU threshold for NMS"
+    },
+    "max_detections": {
+      "type": "number",
+      "default": "100",
+      "required": false,
+      "description": "Maximum number of detections per image"
+    },
+    "use_gpu": {
+      "type": "boolean",
+      "default": "true",
+      "required": false,
+      "description": "Use GPU for inference if available"
+    }
+  }
+}

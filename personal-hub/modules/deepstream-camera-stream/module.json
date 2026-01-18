@@ -1,0 +1,54 @@
+{
+  "id": "deepstream-camera-stream",
+  "name": "DeepStream Camera Stream",
+  "description": "Real-time GPU-accelerated video streaming using NVIDIA DeepStream. Ingests RTSP/USB cameras and outputs processed streams.",
+  "version": "1.0.0",
+  "tags": ["deepstream", "camera", "rtsp", "gpu", "nvidia", "streaming"],
+  "ui": {
+    "path": "/modules/deepstream-camera-stream",
+    "icon": "Camera",
+    "nav_order": 10
+  },
+  "api": {
+    "base_path": "/api/modules/deepstream",
+    "health_path": "/health"
+  },
+  "permissions_required": ["user"],
+  "services": {
+    "main": "deepstream",
+    "relay": "go2rtc"
+  },
+  "config_schema": {
+    "camera_url": {
+      "type": "string",
+      "default": "rtsp://admin:password@192.168.1.100:554/stream1",
+      "required": true,
+      "description": "RTSP URL of the camera source",
+      "is_secret": false
+    },
+    "camera_name": {
+      "type": "string",
+      "default": "main_camera",
+      "required": true,
+      "description": "Name identifier for the camera"
+    },
+    "output_codec": {
+      "type": "string",
+      "default": "h264",
+      "required": false,
+      "description": "Output codec (h264, h265)"
+    },
+    "output_bitrate": {
+      "type": "number",
+      "default": "4000000",
+      "required": false,
+      "description": "Output bitrate in bps"
+    },
+    "enable_analytics": {
+      "type": "boolean",
+      "default": "false",
+      "required": false,
+      "description": "Enable object detection analytics"
+    }
+  }
+}

@@ -16,8 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy project files needed for install
+COPY pyproject.toml README.md ./
+
 # Install Python dependencies
-COPY pyproject.toml ./
 RUN pip install --no-cache-dir -e ".[dev]"
 
 # Copy application code
@@ -45,8 +47,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -s /bin/bash appuser
 
+# Copy project files needed for install
+COPY pyproject.toml README.md ./
+
 # Install Python dependencies
-COPY pyproject.toml ./
 RUN pip install --no-cache-dir -e .
 
 # Copy application code

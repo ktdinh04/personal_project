@@ -96,31 +96,6 @@ class ModuleConfigResponse(ModuleConfigBase):
     model_config = {"from_attributes": True}
 
 
-class ModuleManifest(BaseModel):
-    """Module manifest schema (loaded from module.json)."""
-
-    id: str
-    name: str
-    description: str | None = None
-    version: str = "1.0.0"
-    tags: list[str] = Field(default_factory=list)
-
-    # UI configuration
-    ui: ModuleUIConfig | None = None
-
-    # API configuration
-    api: ModuleAPIConfig | None = None
-
-    # Permissions
-    permissions_required: list[str] = Field(default_factory=list)
-
-    # Docker services
-    services: dict[str, str] = Field(default_factory=dict)
-
-    # Configuration schema
-    config_schema: dict[str, ModuleConfigSchema] = Field(default_factory=dict)
-
-
 class ModuleUIConfig(BaseModel):
     """Module UI configuration."""
 
@@ -144,3 +119,28 @@ class ModuleConfigSchema(BaseModel):
     required: bool = False
     description: str | None = None
     is_secret: bool = False
+
+
+class ModuleManifest(BaseModel):
+    """Module manifest schema (loaded from module.json)."""
+
+    id: str
+    name: str
+    description: str | None = None
+    version: str = "1.0.0"
+    tags: list[str] = Field(default_factory=list)
+
+    # UI configuration
+    ui: ModuleUIConfig | None = None
+
+    # API configuration
+    api: ModuleAPIConfig | None = None
+
+    # Permissions
+    permissions_required: list[str] = Field(default_factory=list)
+
+    # Docker services
+    services: dict[str, str] = Field(default_factory=dict)
+
+    # Configuration schema
+    config_schema: dict[str, ModuleConfigSchema] = Field(default_factory=dict)
